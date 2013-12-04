@@ -1,0 +1,23 @@
+SENSORS = sensors.c button-sensor.c
+PIC18F = leds-arch.c
+
+CONTIKI_TARGET_DIRS = . dev
+ifndef CONTIKI_TARGET_MAIN
+CONTIKI_TARGET_MAIN = contiki-main.c
+endif
+
+ifndef CONTIKI_NO_NET
+CONTIKI_NO_NET = 1
+endif
+
+CONTIKI_TARGET_SOURCEFILES += $(SENSORS) $(PIC18F) $(CONTIKI_TARGET_MAIN)
+
+MCU = 18f25k20
+MCU_FAMILY = 18f23k20
+
+include $(CONTIKI)/cpu/pic18f/Makefile.pic18f
+
+### System dependent Makefile
+
+# pk2cmd is platform independed
+-include ./buildscripts/Makefile
