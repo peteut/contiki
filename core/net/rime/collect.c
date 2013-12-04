@@ -446,7 +446,7 @@ update_rtmetric(struct collect_conn *tc)
     PRINTF("%d.%d: new rtmetric %d\n",
            linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1],
            tc->rtmetric);
-    
+
     /* We got a new, working, route we send any queued packets we may have. */
     if(old_rtmetric == RTMETRIC_MAX && new_rtmetric != RTMETRIC_MAX) {
       PRINTF("Sending queued packet because rtmetric was max\n");
@@ -464,7 +464,7 @@ static int
 enqueue_dummy_packet(struct collect_conn *c, int rexmits)
 {
   struct collect_neighbor *n;
-  
+
   packetbuf_clear();
   packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, c->eseqno - 1);
   packetbuf_set_addr(PACKETBUF_ADDR_ESENDER, &linkaddr_node_addr);
@@ -697,7 +697,7 @@ retransmit_current_packet(struct collect_conn *c)
   if(q != NULL) {
 
     update_rtmetric(c);
-    
+
     /* Place the queued packet into the packetbuf. */
     queuebuf_to_packetbuf(q);
 
@@ -794,7 +794,7 @@ handle_ack(struct collect_conn *tc)
            (int)CLOCK_SECOND,
            (int)((clock_time() - tc->send_time) / CLOCK_SECOND),
            (int)(((100 * (clock_time() - tc->send_time)) / CLOCK_SECOND) % 100));*/
-    
+
     stats.ackrecv++;
     memcpy(&msg, packetbuf_dataptr(), sizeof(struct ack_msg));
 
@@ -882,7 +882,7 @@ send_ack(struct collect_conn *tc, const linkaddr_t *to, int flags)
   packetbuf_clear();
   packetbuf_set_datalen(sizeof(struct ack_msg));
   ack = packetbuf_dataptr();
-  memset(ack, 0, sizeof(struct ack_msg));
+  memset((void *)ack, 0, sizeof(struct ack_msg));
   ack->rtmetric = tc->rtmetric;
   ack->flags = flags;
 
@@ -1133,7 +1133,7 @@ node_packet_sent(struct unicast_conn *c, int status, int transmissions)
      PACKETBUF_ATTR_PACKET_TYPE_DATA) {
 
     tc->transmissions += transmissions;
-    PRINTF("tx %d\n", tc->transmissions);    
+    PRINTF("tx %d\n", tc->transmissions);
     PRINTF("%d.%d: MAC sent %d transmissions to %d.%d, status %d, total transmissions %d\n",
            linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1],
            transmissions,
@@ -1219,7 +1219,7 @@ adv_received(struct neighbor_discovery_conn *c, const linkaddr_t *from,
     if(rtmetric == RTMETRIC_MAX &&
        collect_neighbor_rtmetric(n) != RTMETRIC_MAX) {
       bump_advertisement(tc);
-    } 
+    }
     collect_neighbor_update_rtmetric(n, rtmetric);
     PRINTF("%d.%d: updating neighbor %d.%d, etx %d\n",
 	   linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1],
@@ -1420,7 +1420,7 @@ collect_send(struct collect_conn *tc, int rexmits)
 {
   struct collect_neighbor *n;
   int ret;
-  
+
   packetbuf_set_attr(PACKETBUF_ATTR_EPACKET_ID, tc->eseqno);
 
   /* Increase the sequence number for the packet we send out. We
@@ -1477,7 +1477,7 @@ collect_send(struct collect_conn *tc, int rexmits)
       ret = 0;
     }
 
-    
+
     n = collect_neighbor_list_find(&tc->neighbor_list, &tc->parent);
     if(n != NULL) {
       PRINTF("%d.%d: sending to %d.%d\n",

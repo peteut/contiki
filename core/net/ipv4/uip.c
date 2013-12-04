@@ -488,7 +488,7 @@ uip_udp_new(const uip_ipaddr_t *ripaddr, uint16_t rport)
   conn->lport = UIP_HTONS(lastport);
   conn->rport = rport;
   if(ripaddr == NULL) {
-    memset(&conn->ripaddr, 0, sizeof(uip_ipaddr_t));
+    memset((void *)&conn->ripaddr, 0, sizeof(uip_ipaddr_t));
   } else {
     uip_ipaddr_copy(&conn->ripaddr, ripaddr);
   }

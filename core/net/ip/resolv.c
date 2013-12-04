@@ -707,7 +707,7 @@ check_entries(void)
         namemapptr->retries = 0;
       }
       hdr = (struct dns_hdr *)uip_appdata;
-      memset(hdr, 0, sizeof(struct dns_hdr));
+      memset((void *)hdr, 0, sizeof(struct dns_hdr));
       hdr->id = random_rand();
       namemapptr->id = hdr->id;
 #if RESOLV_CONF_SUPPORTS_MDNS
@@ -758,7 +758,7 @@ check_entries(void)
         uip_udp_packet_sendto(resolv_conn, uip_appdata,
                               (query - (uint8_t *) uip_appdata),
                               (const uip_ipaddr_t *)
-                                uip_nameserver_get(namemapptr->server), 
+                                uip_nameserver_get(namemapptr->server),
                               UIP_HTONS(DNS_PORT));
 
         PRINTF("resolver: (i=%d) Sent DNS request for \"%s\".\n", i,
@@ -767,7 +767,7 @@ check_entries(void)
 #else /* RESOLV_CONF_SUPPORTS_MDNS */
       uip_udp_packet_sendto(resolv_conn, uip_appdata,
                             (query - (uint8_t *) uip_appdata),
-                            uip_nameserver_get(namemapptr->server), 
+                            uip_nameserver_get(namemapptr->server),
                             UIP_HTONS(DNS_PORT));
       PRINTF("resolver: (i=%d) Sent DNS request for \"%s\".\n", i,
              namemapptr->name);
@@ -1064,10 +1064,10 @@ newdata(void)
   /* Got to this point there's no answer, try next nameserver if available
      since this one doesn't know the answer */
 #if RESOLV_CONF_SUPPORTS_MDNS
-  if(nanswers == 0 && UIP_UDP_BUF->srcport != UIP_HTONS(MDNS_PORT) 
+  if(nanswers == 0 && UIP_UDP_BUF->srcport != UIP_HTONS(MDNS_PORT)
       && hdr->id != 0)
 #else
-  if(nanswers == 0) 
+  if(nanswers == 0)
 #endif
   {
     if(try_next_server(namemapptr)) {
@@ -1273,7 +1273,7 @@ resolv_query(const char *name)
   register struct namemap *nameptr = 0;
 
   init();
-  
+
   lseq = lseqi = 0;
 
   /* Remove trailing dots, if present. */
@@ -1304,7 +1304,7 @@ resolv_query(const char *name)
 
   PRINTF("resolver: Starting query for \"%s\".\n", name);
 
-  memset(nameptr, 0, sizeof(*nameptr));
+  memset((void *)nameptr, 0, sizeof(*nameptr));
 
   strncpy(nameptr->name, name, sizeof(nameptr->name));
   nameptr->state = STATE_NEW;
