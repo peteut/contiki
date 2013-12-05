@@ -9,10 +9,17 @@ STRIP    = strip
 ### Define the CPU directory
 CONTIKI_CPU=$(CONTIKI)/cpu/pic18f
 
-CFLAGS  += --std-c99 -mpic16 -p$(MCU) --stack-auto  --calltree --optimize-df \
-	--obanksel=2 --debug --use-non-free --extended
+CFLAGS  += --std-c99 -mpic16 -p$(MCU) --stack-auto \
+	--debug --use-non-free --extended
 LDFLAGS += -c -r -m  -w -l -s $(MCU).lkr
 AROPTS   = -c
+
+## memset signature is _not_ portable!
+## #define _STRING_SPEC __data
+## void *memset(_STRING_SPEC void *, unsigned char, size_t);
+ifndef DATAP
+DATAP = "(void __data *)"
+endif
 
 ### CPU-dependent cleanup files
 CLEAN += *.lnk *.sym *.lib *.ihx *.rel *.mem *.rst *.asm *.cof *.cod *.calltree *.adb *.hex
@@ -46,6 +53,7 @@ CUSTOM_RULE_LINK = 1
 
 ifdef CUSTOM_RULE_C_TO_OBJECTDIR_O
 $(OBJECTDIR)/%.o: %.c | $(OBJECTDIR)
+	$(TRACE_CC)
 	$(CC) $(CFLAGS) -c $< -o $@
 	$(CC) $(CFLAGS) -MM -c $< > $(@:.o=.d)
 	@$(FINALIZE_DEPENDENCY)
@@ -53,6 +61,7 @@ endif
 
 ifdef CUSTOM_RULE_C_TO_CO
 %.co: %.c
+	$(TRACE_CC)
 	$(CC) $(CFLAGS) -DAUTOSTART_ENABLE -c $< -o $(@:.co=.asm)
 	$(AS) -p p$(MCU) -c $(@:.co=.asm)
 	@mv $(@:.co=.o) $@
@@ -60,7 +69,8 @@ endif
 
 ## CUSTOM_RULE_ALLOBJS_TO_TARGETLIB
 contiki-$(TARGET).lib: $(CONTIKI_OBJECTFILES)
-	rm -f $@
+	$(TRACE_AR)
+	@rm -f $@
 	$(AR) $(AROPTS) $@ $^
 	@rm -f *.adb
 
@@ -71,6 +81,7 @@ contiki-$(TARGET).lib: $(CONTIKI_OBJECTFILES)
 
 ## .hex is the gplink output file
 %.hex: %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).lib
+	$(TRACE_LD)
 	$(LD) $(LDFLAGS) -o $@ -I . -I $(SDCC_NON_FREE_LIB_DIR) -I $(SDCC_LIB_DIR) \
 	-I $(subst pic16,small-stack-auto,$(SDCC_LIB_DIR)) $*.co  \
 	libsdcc.lib libio$(MCU_FAMILY).lib libdev$(MCU_FAMILY).lib \

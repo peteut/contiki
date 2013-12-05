@@ -134,6 +134,12 @@ ifdef PLATFORMAPPS
   APPDS += $(PLATFORMAPPDS)
 endif
 
+### Fix data pointer specifier.
+ifndef DATAP
+DATAP = ""
+endif
+CFLAGS += -DDATAP=$(DATAP)
+
 ### Verbosity control. Use  make V=1  to get verbose builds.
 
 ifeq ($(V),1)

@@ -43,7 +43,7 @@
 void
 uip_debug_ipaddr_print(const uip_ipaddr_t *addr)
 {
-  if(addr == NULL || addr->u8 == NULL) {
+  if(!addr || !addr->u8) {
     printf("(NULL IP addr)");
     return;
   }
