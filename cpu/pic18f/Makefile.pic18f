@@ -21,7 +21,7 @@ DATAP = "(void __data *)"
 endif
 
 ### CPU-dependent cleanup files
-CLEAN += *.lnk *.sym *.lib *.ihx *.rel *.mem *.rst *.asm *.cof *.cod *.calltree *.adb
+CLEAN += *.lnk *.sym *.lib *.ihx *.rel *.mem *.rst *.asm *.cof *.cod *.calltree *.adb *.pre *.p1 *.d
 
 SDCC_LIB_DIR = $(subst bin/sdcc,share/sdcc/lib/pic16,$(shell which sdcc))
 SDCC_NON_FREE_LIB_DIR += $(subst bin/sdcc,share/sdcc/non-free/lib/pic16,$(shell which sdcc))
