@@ -144,26 +144,41 @@ public class DirectedGraphMedium extends AbstractRadioMedium {
     }
   }
 
+
+  
   public void updateSignalStrengths() {
 
-    /* Reset signal strengths */
+    /* Reset signal strengths (Default: SS_NOTHING) */
     for (Radio radio : getRegisteredRadios()) {
-      radio.setCurrentSignalStrength(SS_NOTHING);
+      radio.setCurrentSignalStrength(getBaseRssi(radio));
     }
 
     /* Set signal strengths */
     RadioConnection[] conns = getActiveConnections();
     for (RadioConnection conn : conns) {
-      /* When sending RSSI is Strong!
-       * TODO: is this reasonable
+      /*
+       * Set sending RSSI. (Default: SS_STRONG)
        */
-      if (conn.getSource().getCurrentSignalStrength() < SS_STRONG) {
-        conn.getSource().setCurrentSignalStrength(SS_STRONG);
+      if (conn.getSource().getCurrentSignalStrength() < getSendRssi(conn.getSource())) {
+        conn.getSource().setCurrentSignalStrength(getSendRssi(conn.getSource()));
       }
       //Maximum reception signal of all possible radios received
       DGRMDestinationRadio dstRadios[] =  getPotentialDestinations(conn.getSource());
       if (dstRadios == null) continue; 
       for (DGRMDestinationRadio dstRadio : dstRadios) {
+
+        int activeSourceChannel = conn.getSource().getChannel();
+        int edgeChannel = dstRadio.channel;
+        int activeDstChannel = dstRadio.radio.getChannel();
+        if (activeSourceChannel != -1) {
+          if (edgeChannel != -1 && activeSourceChannel != edgeChannel) {
+            continue;
+          }
+          if (activeDstChannel != -1 && activeSourceChannel != activeDstChannel) {
+            continue;
+          }
+        }
+
         if (dstRadio.radio.getCurrentSignalStrength() < dstRadio.signal) {
           dstRadio.radio.setCurrentSignalStrength(dstRadio.signal);
         }
@@ -245,13 +260,27 @@ public class DirectedGraphMedium extends AbstractRadioMedium {
 
     /*logger.info(source + ": " + destinations.length + " potential destinations");*/
     for (DGRMDestinationRadio dest: destinations) {
-      
+    
       if (dest.radio == source) {
         /* Fail: cannot receive our own transmission */
         /*logger.info(source + ": Fail, receiver is sender");*/
         continue;
       }
 
+      int srcc = source.getChannel();
+      int dstc = dest.radio.getChannel();
+      int edgeChannel = dest.getChannel();
+
+      if (edgeChannel >= 0 && dstc >= 0 && edgeChannel != dstc) {
+      	/* Fail: the edge is configured for a different radio channel */
+        continue;
+      }
+
+      if (srcc >= 0 && dstc >= 0 && srcc != dstc) {
+        /* Fail: radios are on different (but configured) channels */
+        newConn.addInterfered(dest.radio);
+        continue;
+      }
 
       if (!dest.radio.isRadioOn()) {
         /* Fail: radio is off */
@@ -266,14 +295,7 @@ public class DirectedGraphMedium extends AbstractRadioMedium {
         newConn.addInterfered(dest.radio);
         continue;
       }
-
-      int srcc = source.getChannel();
-      int dstc = dest.radio.getChannel(); 
-      if ( srcc >= 0 && dstc >= 0 && srcc != dstc) {
-    	/* Fail: radios are on different (but configured) channels */
-        continue;
-      }
-      
+     
       if (dest.radio.isReceiving()) {
          /* Fail: radio is already actively receiving */
          /*logger.info(source + ": Fail, receiving");*/
@@ -311,10 +333,10 @@ public class DirectedGraphMedium extends AbstractRadioMedium {
   }
 
   public Collection<Element> getConfigXML() {
-    ArrayList<Element> config = new ArrayList<Element>();
-    Element element;
+    Collection<Element> config = super.getConfigXML();
 
     for (Edge edge: getEdges()) {
+      Element element;
       element = new Element("edge");
       element.addContent(edge.getConfigXML());
       config.add(element);
@@ -325,6 +347,8 @@ public class DirectedGraphMedium extends AbstractRadioMedium {
 
   private Collection<Element> delayedConfiguration = null;
   public boolean setConfigXML(Collection<Element> configXML, boolean visAvailable) {
+    super.setConfigXML(configXML, visAvailable);
+
     random = simulation.getRandomGenerator();
 
     /* Wait until simulation has been loaded */
@@ -336,6 +360,8 @@ public void simulationFinishedLoading() {
     if (delayedConfiguration == null) {
       return;
     }
+
+    super.simulationFinishedLoading();
 
     boolean oldConfig = false;
     for (Element element : delayedConfiguration) {
@@ -380,6 +406,9 @@ public void simulationFinishedLoading() {
               if (destClassName == null || destClassName.isEmpty()) {
                 continue;
               }
+              /* Backwards compatibility: se.sics -> org.contikios */
+              destClassName = destClassName.replaceFirst("^se\\.sics", "org.contikios");
+              
               Class<? extends DGRMDestinationRadio> destClass =
                 simulation.getCooja().tryLoadClass(this, DGRMDestinationRadio.class, destClassName);
               if (destClass == null) {

@@ -37,7 +37,7 @@
 #include <string.h>
 
 #define DEBUG DEBUG_PRINT
-#include "net/uip-debug.h"
+#include "net/ip/uip-debug.h"
 
 #define SEND_INTERVAL		25 * CLOCK_SECOND
 
@@ -166,7 +166,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
     if(etimer_expired(&wake_timer)){  // if timer hasn't expired do not go in deep sleep, in order to receive a response.
 		printf("Sleeping...\r\n");
 		halBoardPowerDown();//sensorsPowerDown();
-		clock_wait(SLEEP_INTERVAL_SECONDS * 1000); // Put system in deep sleep mode for a while.
+		sleep_seconds(SLEEP_INTERVAL_SECONDS); // Put system in deep sleep mode for a while.
 		halBoardPowerUp();//sensorsPowerUp();
 		printf("Awake\r\n");
     }

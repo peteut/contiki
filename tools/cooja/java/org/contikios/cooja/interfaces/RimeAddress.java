@@ -43,12 +43,12 @@ import org.jdom.Element;
 import org.contikios.cooja.ClassDescription;
 import org.contikios.cooja.Mote;
 import org.contikios.cooja.MoteInterface;
-import org.contikios.cooja.MoteMemory;
-import org.contikios.cooja.MoteMemory.MemoryEventType;
-import org.contikios.cooja.MoteMemory.MemoryMonitor;
+import org.contikios.cooja.mote.memory.MemoryInterface;
+import org.contikios.cooja.mote.memory.MemoryInterface.SegmentMonitor;
+import org.contikios.cooja.mote.memory.VarMemory;
 
 /**
- * Read-only interface to Rime address read from Contiki variable: rimeaddr_node_addr.
+ * Read-only interface to Rime address read from Contiki variable: linkaddr_node_addr.
  * XXX Assuming Rime address is 2 bytes.
  *
  * @see #RIME_ADDR_LENGTH
@@ -57,18 +57,19 @@ import org.contikios.cooja.MoteMemory.MemoryMonitor;
 @ClassDescription("Rime address")
 public class RimeAddress extends MoteInterface {
   private static Logger logger = Logger.getLogger(RimeAddress.class);
-  private MoteMemory moteMem;
+  private VarMemory moteMem;
 
   public static final int RIME_ADDR_LENGTH = 2;
 
-  private MemoryMonitor memMonitor = null;
+  private SegmentMonitor memMonitor = null;
 
   public RimeAddress(final Mote mote) {
-    moteMem = mote.getMemory();
+    moteMem = new VarMemory(mote.getMemory());
     if (hasRimeAddress()) {
-      memMonitor = new MemoryMonitor() {
-        public void memoryChanged(MoteMemory memory, MemoryEventType type, int address) {
-          if (type != MemoryEventType.WRITE) {
+      memMonitor = new SegmentMonitor() {
+        @Override
+        public void memoryChanged(MemoryInterface memory, SegmentMonitor.EventType type, long address) {
+          if (type != SegmentMonitor.EventType.WRITE) {
             return;
           }
           setChanged();
@@ -76,12 +77,12 @@ public class RimeAddress extends MoteInterface {
         }
       };
       /* TODO XXX Timeout? */
-      moteMem.addMemoryMonitor(moteMem.getVariableAddress("rimeaddr_node_addr"), RIME_ADDR_LENGTH, memMonitor);
+      moteMem.addVarMonitor(SegmentMonitor.EventType.WRITE, "linkaddr_node_addr", memMonitor);
     }
   }
 
   public boolean hasRimeAddress() {
-    return moteMem.variableExists("rimeaddr_node_addr");
+    return moteMem.variableExists("linkaddr_node_addr");
   }
 
   public String getAddressString() {
@@ -90,7 +91,7 @@ public class RimeAddress extends MoteInterface {
     }
 
     String addrString = "";
-    byte[] addr = moteMem.getByteArray("rimeaddr_node_addr", RIME_ADDR_LENGTH);
+    byte[] addr = moteMem.getByteArray("linkaddr_node_addr", RIME_ADDR_LENGTH);
     for (int i=0; i < RIME_ADDR_LENGTH-1; i++) {
       addrString += (0xFF & addr[i]) + ".";
     }
@@ -131,7 +132,7 @@ public class RimeAddress extends MoteInterface {
   public void removed() {
     super.removed();
     if (memMonitor != null) {
-      moteMem.removeMemoryMonitor(moteMem.getVariableAddress("rimeaddr_node_addr"), RIME_ADDR_LENGTH, memMonitor);
+      moteMem.removeVarMonitor("linkaddr_node_addr", memMonitor);
     }
   }
 

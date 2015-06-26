@@ -115,21 +115,16 @@ send_one_packet(mac_callback_t sent, void *ptr)
   int ret;
   int last_sent_ok = 0;
 
-  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &rimeaddr_node_addr);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 #if NULLRDC_802154_AUTOACK || NULLRDC_802154_AUTOACK_HW
   packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
 #endif /* NULLRDC_802154_AUTOACK || NULLRDC_802154_AUTOACK_HW */
 
-  if(NETSTACK_FRAMER.create() < 0) {
+  if(NETSTACK_FRAMER.create_and_secure() < 0) {
     /* Failed to allocate space for headers */
     PRINTF("nullrdc: send failed, too large header\n");
     ret = MAC_TX_ERR_FATAL;
   } else {
-
-#ifdef NETSTACK_ENCRYPT
-    NETSTACK_ENCRYPT();
-#endif /* NETSTACK_ENCRYPT */
-
 #if NULLRDC_802154_AUTOACK
     int is_broadcast;
     uint8_t dsn;
@@ -137,8 +132,7 @@ send_one_packet(mac_callback_t sent, void *ptr)
 
     NETSTACK_RADIO.prepare(packetbuf_hdrptr(), packetbuf_totlen());
 
-    is_broadcast = rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-                                &rimeaddr_null);
+    is_broadcast = packetbuf_holds_broadcast();
 
     if(NETSTACK_RADIO.receiving_packet() ||
        (!is_broadcast && NETSTACK_RADIO.pending_packet())) {
@@ -270,14 +264,13 @@ send_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
 static void
 packet_input(void)
 {
+#if NULLRDC_SEND_802154_ACK
   int original_datalen;
   uint8_t *original_dataptr;
 
   original_datalen = packetbuf_datalen();
   original_dataptr = packetbuf_dataptr();
-#ifdef NETSTACK_DECRYPT
-    NETSTACK_DECRYPT();
-#endif /* NETSTACK_DECRYPT */
+#endif
 
 #if NULLRDC_802154_AUTOACK
   if(packetbuf_datalen() == ACK_LEN) {
@@ -288,35 +281,37 @@ packet_input(void)
   if(NETSTACK_FRAMER.parse() < 0) {
     PRINTF("nullrdc: failed to parse %u\n", packetbuf_datalen());
 #if NULLRDC_ADDRESS_FILTER
-  } else if(!rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-                                         &rimeaddr_node_addr) &&
-            !rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-                          &rimeaddr_null)) {
+  } else if(!linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
+                                         &linkaddr_node_addr) &&
+            !packetbuf_holds_broadcast()) {
     PRINTF("nullrdc: not for us\n");
 #endif /* NULLRDC_ADDRESS_FILTER */
   } else {
     int duplicate = 0;
 
 #if NULLRDC_802154_AUTOACK || NULLRDC_802154_AUTOACK_HW
+#if RDC_WITH_DUPLICATE_DETECTION
     /* Check for duplicate packet. */
     duplicate = mac_sequence_is_duplicate();
     if(duplicate) {
       /* Drop the packet. */
       PRINTF("nullrdc: drop duplicate link layer packet %u\n",
-             packetbuf_attr(PACKETBUF_ATTR_PACKET_ID));
+             packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO));
     } else {
       mac_sequence_register_seqno();
     }
+#endif /* RDC_WITH_DUPLICATE_DETECTION */
 #endif /* NULLRDC_802154_AUTOACK */
 
+/* TODO We may want to acknowledge only authentic frames */ 
 #if NULLRDC_SEND_802154_ACK
     {
       frame802154_t info154;
       frame802154_parse(original_dataptr, original_datalen, &info154);
       if(info154.fcf.frame_type == FRAME802154_DATAFRAME &&
          info154.fcf.ack_required != 0 &&
-         rimeaddr_cmp((rimeaddr_t *)&info154.dest_addr,
-                      &rimeaddr_node_addr)) {
+         linkaddr_cmp((linkaddr_t *)&info154.dest_addr,
+                      &linkaddr_node_addr)) {
         uint8_t ackdata[ACK_LEN] = {0, 0, 0};
 
         ackdata[0] = FRAME802154_ACKFRAME;

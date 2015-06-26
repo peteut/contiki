@@ -1,22 +1,3 @@
-/**
- * \addtogroup rime
- * @{
- */
-
-/**
- * \defgroup rimeneighbordiscovery Neighbor discovery
- * @{
- *
- * The neighbor-discovery module implements a periodic neighbor
- * discovery mechanism. A callback is invoked for every incoming
- * neighbor discovery message.
- *
- * \section channels Channels
- *
- * The neighbor-discovery module uses 1 channel.
- *
- */
-
 /*
  * Copyright (c) 2006, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -56,6 +37,25 @@
  *         Adam Dunkels <adam@sics.se>
  */
 
+/**
+ * \addtogroup rime
+ * @{
+ */
+
+/**
+ * \defgroup rimeneighbordiscovery Neighbor discovery
+ * @{
+ *
+ * The neighbor-discovery module implements a periodic neighbor
+ * discovery mechanism. A callback is invoked for every incoming
+ * neighbor discovery message.
+ *
+ * \section neighbor-discovery-channels Channels
+ *
+ * The neighbor-discovery module uses 1 channel.
+ *
+ */
+
 #ifndef NEIGHBOR_DISCOVERY_H_
 #define NEIGHBOR_DISCOVERY_H_
 
@@ -66,7 +66,7 @@ struct neighbor_discovery_conn;
 
 struct neighbor_discovery_callbacks {
   void (* recv)(struct neighbor_discovery_conn *c,
-		const rimeaddr_t *from, uint16_t val);
+		const linkaddr_t *from, uint16_t val);
   void (* sent)(struct neighbor_discovery_conn *c);
 };
 
